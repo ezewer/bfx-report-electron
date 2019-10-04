@@ -21,6 +21,7 @@ const wins = {
   errorWindow: null
 }
 
+const userDataDir = path.join(__dirname, 'user-data')
 const publicDir = path.join(__dirname, 'bfx-report-ui/build')
 const loadURL = serve({ directory: publicDir })
 
@@ -107,6 +108,7 @@ const createWindow = (
     manage
   } = isMainWindow
     ? windowStateKeeper({
+      path: userDataDir,
       defaultWidth,
       defaultHeight
     })
