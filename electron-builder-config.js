@@ -1,5 +1,6 @@
 'use strict'
 
+require('dotenv').config()
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
@@ -7,10 +8,31 @@ const { promisify } = require('util')
 const archiver = require('archiver')
 const exec = promisify(require('child_process').exec)
 
+const parseEnvValToBool = require(
+  './src/helpers/parse-env-val-to-bool'
+)
+
 let version
 let zippedAppImageArtifactPath
 let zippedMacArtifactPath
 const appOutDirs = new Map()
+const isNotarize = parseEnvValToBool(process.env.NOTARIZE)
+
+// Notarize can be done only on MacOS
+const macNotarize = (
+  process.platform === 'darwin' &&
+  isNotarize
+)
+  ? {
+      notarize: {
+        teamId: process.env.APPLE_TEAM_ID
+      }
+    }
+  : {}
+// DMG can be built only on MacOS
+const macSpecificTargets = process.platform === 'darwin'
+  ? ['dmg']
+  : []
 
 /* eslint-disable no-template-curly-in-string */
 
@@ -92,15 +114,24 @@ module.exports = {
     verifyUpdateCodeSignature: false
   },
   mac: {
-    type: 'development',
+    type: 'distribution',
     hardenedRuntime: true,
     gatekeeperAssess: false,
     entitlements: 'build/entitlements.mac.plist',
     entitlementsInherit: 'build/entitlements.mas.inherit.plist',
     category: 'public.app-category.finance',
+    minimumSystemVersion: '11',
+    darkModeSupport: true,
+    ...macNotarize,
     target: [
-      'dir'
+      'dir',
+      ...macSpecificTargets
     ]
+  },
+  dmg: {
+    // TODO: Need to check
+    // https://kilianvalkhof.com/2019/electron/notarizing-your-electron-application
+    // sign: !isNotarize
   },
   files: [
     '**/*',
